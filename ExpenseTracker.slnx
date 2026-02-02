@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/Api/">
+    <Project Path="Api/ExpenseTracker.Api/ExpenseTracker.Api.csproj" />
+  </Folder>
+</Solution>
