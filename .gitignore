@@ -1,9 +1,10 @@
 # =====================
 # Backend (.NET)
 # =====================
-Api/ExpenseTracker.Api/bin/
-Api/ExpenseTracker.Api/obj/
-Api/.vs/
+Api/**/bin/
+Api/**/obj/
+Api/**/.vs/
+
 
 # =====================
 # Frontend (example: Node / React)
