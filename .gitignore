@@ -1,0 +1,23 @@
+# =====================
+# Backend (.NET)
+# =====================
+Api/ExpenseTracker.Api/bin/
+Api/ExpenseTracker.Api/obj/
+Api/.vs/
+
+# =====================
+# Frontend (example: Node / React)
+# =====================
+Client/node_modules/
+Client/dist/
+Client/build/
+Client/.env
+Client/.env.*
+
+# =====================
+# Common
+# =====================
+.env
+*.log
+.DS_Store
+Thumbs.db
