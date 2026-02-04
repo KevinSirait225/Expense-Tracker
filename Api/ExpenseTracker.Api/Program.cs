@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using ExpenseTracker.Api.Data;
 using ExpenseTracker.Api.Services;
 using ExpenseTracker.Api.Dtos.Auth;
+using ExpenseTracker.Api.Dtos.Expenses;
 using ExpenseTracker.Api.Models;
 using ExpenseTracker.Api.Dtos;
 
@@ -9,6 +10,12 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
+
+// Ambil user id
+int GetUserId(ClaimsPrincipal user)
+{
+    return int.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -46,6 +53,7 @@ app.UseAuthorization();
 
 app.MapGet("/", () => "API running");
 
+// AUTH ROUTES
 // Register akun
 app.MapPost("/auth/register", async (
     RegisterDto dto,
@@ -99,6 +107,92 @@ app.MapPost("/auth/login", async (
     });
 });
 
+// EXPENSES ROUTES
+app.MapPost("/expenses", async (
+    CreateExpenseDto dto,
+    AppDbContext db,
+    ClaimsPrincipal user
+) =>
+{
+    // Ambl user id dari user yang sedang login
+    var userId = GetUserId(user);
+    var expense = new Expense
+    {
+        Amount = dto.Amount,
+        Description = dto.Description,
+        UserId = userId
+    };
+
+    db.Expenses.Add(expense);
+    await db.SaveChangesAsync();
+
+    // Response untuk kontrol apa aja yang keluar
+    var response = new ExpenseDto
+    {
+        Id = expense.Id,
+        Amount = expense.Amount,
+        Description = expense.Description,
+        Date = expense.Date
+    };
+
+    return Results.Created($"/expenses/{expense.Id}", response);
+
+}).RequireAuthorization();
+
+app.MapGet("/expenses", async (
+    AppDbContext db,
+    ClaimsPrincipal user
+) =>
+{
+    var userId = GetUserId(user);
+    var expenses = await db.Expenses
+        .Where(e => e.UserId == userId)
+        .OrderByDescending(e => e.Date)
+        .Select( e=> new ExpenseDto
+        {
+            Id = e.Id,
+            Amount = e.Amount,
+            Description = e.Description,
+            Date = e.Date
+        })
+        .ToListAsync();
+    return Results.Ok(expenses);
+}).RequireAuthorization();
+
+app.MapPut("/expenses/{id:int}", async (
+    int id, UpdateExpenseDto dto, AppDbContext db, ClaimsPrincipal user
+) =>
+{
+    var userId = GetUserId(user);
+    var expense= await db.Expenses
+        .FirstOrDefaultAsync(e=>e.Id == id && e.UserId == userId);
+
+    if(expense==null) return Results.NotFound();
+
+    expense.Amount = dto.Amount;
+    expense.Description = dto.Description;
+
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+
+}).RequireAuthorization();
+
+app.MapDelete("/expenses/{id:int}", async (
+    int id, AppDbContext db, ClaimsPrincipal user
+) =>
+{
+    var userId = GetUserId(user);
+    var expense= await db.Expenses
+        .FirstOrDefaultAsync(e=>e.Id == id && e.UserId == userId);
+
+    if(expense==null) return Results.NotFound();
+
+    db.Expenses.Remove(expense);
+    await db.SaveChangesAsync();
+    return Results.NoContent();
+
+}).RequireAuthorization();
+
 // Test authorization
 app.MapGet("/me", (ClaimsPrincipal user) =>
 {
@@ -110,7 +204,6 @@ app.MapGet("/me", (ClaimsPrincipal user) =>
         userId,
         email
     });
-})
-.RequireAuthorization();
+}).RequireAuthorization();
 
 app.Run();
