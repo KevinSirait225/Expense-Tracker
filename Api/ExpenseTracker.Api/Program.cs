@@ -5,11 +5,13 @@ using ExpenseTracker.Api.Dtos.Auth;
 using ExpenseTracker.Api.Dtos.Expenses;
 using ExpenseTracker.Api.Models;
 using ExpenseTracker.Api.Dtos;
+using ExpenseTracker.Api.Middleware;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.Security.Claims;
+using ExpenseTracker.Api.Errors;
 
 // Ambil user id
 int GetUserId(ClaimsPrincipal user)
@@ -48,6 +50,7 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -64,7 +67,7 @@ app.MapPost("/auth/register", async (
     // Email harus unik
     var exist = await db.Users.AnyAsync(u => u.Email == dto.Email);
     // Jika sudah ada tampilkan message
-    if(exist) return Results.BadRequest(new {message = "Email already registered"});
+    if(exist) throw new ValidationException("Email already registered");
 
     // User baru
     var user = new User
@@ -93,11 +96,9 @@ app.MapPost("/auth/login", async (
 {
     // cari user email di db, kalau tdk ada message badrequest
     var user = await db.Users.FirstOrDefaultAsync(u => u.Email == dto.Email);
-    if (user == null) return Results.BadRequest(new {message  = "Invalid credentials"});
-    
-    // verify password yg di input sesuai dgn yg hash yg disimpan atau tdk
-    var valid = passwordService.Verify(user.PasswordHash, dto.Password);
-    if (!valid) return Results.BadRequest(new {message  = "Invalid credentials"});
+    // jika email user tdk ada atau password yg diinput tidak sesuai, return error unauth
+    if (user == null || !passwordService.Verify(user.PasswordHash, dto.Password)) 
+        throw new UnauthorizedException("Invalid credentials");
 
     var token = jwtService.Generate(user);
 
@@ -167,7 +168,9 @@ app.MapPut("/expenses/{id:int}", async (
     var expense= await db.Expenses
         .FirstOrDefaultAsync(e=>e.Id == id && e.UserId == userId);
 
-    if(expense==null) return Results.NotFound();
+    // if(expense==null) return Results.NotFound();
+    if (expense == null) throw new NotFoundException("Expense not found");
+
 
     expense.Amount = dto.Amount;
     expense.Description = dto.Description;
@@ -185,7 +188,9 @@ app.MapDelete("/expenses/{id:int}", async (
     var expense= await db.Expenses
         .FirstOrDefaultAsync(e=>e.Id == id && e.UserId == userId);
 
-    if(expense==null) return Results.NotFound();
+    // if(expense==null) return Results.NotFound();
+    if (expense == null) throw new NotFoundException("Expense not found");
+
 
     db.Expenses.Remove(expense);
     await db.SaveChangesAsync();
@@ -205,5 +210,11 @@ app.MapGet("/me", (ClaimsPrincipal user) =>
         email
     });
 }).RequireAuthorization();
+
+// Test error
+app.MapGet("/test-error", () =>
+{
+    throw new Exception("test exception");
+});
 
 app.Run();
