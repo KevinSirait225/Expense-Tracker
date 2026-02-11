@@ -22,11 +22,11 @@ export async function apiFetch<T>(
   });
 
   if (!res.ok) {
-    let message = "Something went wrong";
+    let message = "Something went wrong2";
 
     try {
       const data = await res.json();
-      message = data?.message ?? data?.error ?? message;
+      message = data?.Message ?? data?.error ?? message;
     } catch {
       // empty body / non-JSON
     }

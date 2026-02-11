@@ -9,6 +9,8 @@ export function getErrorMessage(error: unknown): string {
         if ("message" in error) {
             return String((error as { message: unknown }).message);
         }
+        if ("Message" in error) return String((error as { Message: unknown}).Message);
+        
         // kalo keynya error
         if ("error" in error) {
             return String((error as { error: unknown }).error);

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { expenseService } from "@/services/expenseService";
 import { Expense } from "@/types/expense";
 import { getErrorMessage } from "@/lib/error";
+import LogoutButton from "@/components/LogoutButton";
 
 export default function Home() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -26,7 +27,11 @@ export default function Home() {
 
   return (
     <main className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Expenses</h1>
+
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Expenses</h1>
+        <LogoutButton />
+      </div>
 
       <ul className="space-y-2">
         {expenses.map((e) => (
